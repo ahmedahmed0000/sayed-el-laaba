@@ -1,32 +1,19 @@
-from flask import Flask, render_template_string, request, make_response
+from flask import Flask, render_template_string, request, make_response, redirect, url_for
 import json, os, datetime, threading, time
 import requests
 
 app = Flask(__name__)
 BOOKINGS_FILE = 'bookings.json'
-SETTINGS_FILE = 'settings.json'
+COMMENTS_FILE = 'comments.json'
+PRICE = 40  
 
-# تم تثبيت البيانات الخاصة بك وتأمين المقارنة البرمجية لها
-TELEGRAM_TOKEN = "8972885616:AAFxaKauqJBKZMl1OlXrGgHhmMM4jCYVnlo"
-ADMIN_CHAT_ID = 7728398907  # تم تحويله إلى رقم ليتوافق تماماً مع التليجرام
+TELEGRAM_TOKEN = "8801743115:AAGN2S0DwR5lSMwYMjmsxLyD4E8LJ62mdZI"
+ADMIN_CHAT_ID = "7728398907"
 
-DEFAULT_SETTINGS = {
-    "price_single": "40",
-    "price_4_classes": "150",
-    "price_month": "280",
-    "hero_title": "سيد اللعبة",
-    "hero_desc": "مستر الرياضيات اللي هيخليك تقفل المادة وتجيب الدرجة النهائية",
-    "about_title": "خبرة 10 سنين في اللعبة",
-    "about_desc": 'مع المستر "سيد اللعبة" الرياضيات هتبقى لعبة في ايدك. شرح مبسط + حل امتحانات + متابعة مستمرة 24 ساعة على الواتساب.',
-    "img_hero": "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070",
-    "img_about": "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2032",
-    "img_gallery1": "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1932",
-    "img_gallery2": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2022",
-    "img_gallery3": "https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2070",
-    "img_gallery4": "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=2071"
-}
-
-admin_state = {}
+# قائمة الكلمات المحظورة لمنع العبارات غير اللائقة
+BAD_WORDS = [
+    "شتم", "كلب", "حمار", "غبي", "يا ابن", "عرص", "خول", "شرموط", "تفه", "كس", "زب", "منيك", "قذر", "وسخ"
+]
 
 def load_bookings():
     if os.path.exists(BOOKINGS_FILE):
@@ -37,320 +24,417 @@ def load_bookings():
 def save_bookings(data):
     json.dump(data, open(BOOKINGS_FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
 
-def load_settings():
-    if os.path.exists(SETTINGS_FILE):
-        try: return json.load(open(SETTINGS_FILE, encoding='utf-8'))
-        except: return DEFAULT_SETTINGS
-    return DEFAULT_SETTINGS
+def load_comments():
+    if os.path.exists(COMMENTS_FILE):
+        try: return json.load(open(COMMENTS_FILE, encoding='utf-8'))
+        except: return []
+    return [
+        {"name": "سارة أحمد", "rating": "5", "text": "مستر ممتاز جداً والرياضيات بقت أسهل مادة عندي بفضله", "date": "2026-07-10"},
+        {"name": "محمد كريم", "rating": "4", "text": "أفضل كبسولات ليلة امتحان ممكن تاخدها في حياتك", "date": "2026-07-11"}
+    ]
 
-def save_settings(data):
-    json.dump(data, open(SETTINGS_FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
+def save_comments(data):
+    json.dump(data, open(COMMENTS_FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
 
-def send_telegram(msg, reply_markup=None):
+def check_profanity(text):
+    for word in BAD_WORDS:
+        if word in text.lower():
+            return True
+    return False
+
+def send_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": ADMIN_CHAT_ID, "text": msg, "parse_mode": "HTML"}
-    if reply_markup:
-        data["reply_markup"] = json.dumps(reply_markup)
     try: requests.post(url, data=data, timeout=10)
     except: pass
 
 HTML = """<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
-<title>{{ settings.hero_title }} - مستر الرياضيات</title>
+<title>سيد اللعبة - مستر الرياضيات</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-:root{--gold:#FFD700;--dark:#0a0a0a;--card:#111;--red:#ff0000}
-*{margin:0;padding:0;font-family:'Cairo',tahoma;box-sizing:border-box;scroll-behavior:smooth}
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+:root{--gold:#FFD700;--dark:#0b0c10;--card:#1f2833;--text:#c5c6c7;--teal:#66fcf1}
+*{margin:0;padding:0;font-family:'Cairo',sans-serif;box-sizing:border-box;scroll-behavior:smooth}
 body{background:var(--dark);color:#fff;overflow-x:hidden}
 
-@keyframes float {0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
-@keyframes glow {0%,100%{box-shadow:0 0 20px var(--gold)}50%{box-shadow:0 0 40px var(--gold)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float {0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes glow {0%,100%{box-shadow:0 0 15px var(--gold)}50%{box-shadow:0 0 35px var(--gold)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
-nav{position:fixed;top:0;width:100%;background:rgba(0, 0, 0, 0.85);backdrop-filter:blur(10px);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.5)}
-nav a{color:#fff;text-decoration:none;margin:0 8px;font-weight:700;transition:0.3s;font-size:14px}
+nav{position:fixed;top:0;width:100%;background:rgba(11, 12, 16, 0.9);backdrop-filter:blur(12px);padding:15px 5%;display:flex;justify-content:space-between;align-items:center;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.6);border-bottom:1px solid rgba(255,215,0,0.1)}
+nav .logo{font-weight:900;color:var(--gold);font-size:22px;display:flex;align-items:center;gap:10px;text-shadow:0 0 10px rgba(255,215,0,0.3)}
+nav .links{display:flex;gap:20px}
+nav a{color:#fff;text-decoration:none;font-weight:700;transition:0.3s;font-size:15px}
 nav a:hover{color:var(--gold)}
 
-.hero{min-height:100vh;background:linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.8)),url('{{ settings.img_hero }}') center/cover; display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 20px 40px 20px}
-.hero-content{animation:fadeIn 1.2s ease; width:100%}
-.hero h1{font-size:3rem;font-weight:900;color:var(--gold);margin-bottom:15px;text-shadow:0 0 20px var(--gold)}
-.hero p{font-size:1.1rem;color:#ccc;margin-bottom:30px;line-height:1.6}
-.btn{background:var(--gold);color:#000;padding:12px 35px;border:none;border-radius:50px;font-size:16px;font-weight:900;cursor:pointer;transition:0.3s;text-decoration:none;display:inline-block}
-.btn:hover{transform:scale(1.05);box-shadow:0 0 30px var(--gold)}
+.hero{min-height:100vh;background:linear-gradient(rgba(11,12,16,0.75),rgba(11,12,16,0.95)),url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070') center/cover fixed; display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 20px 60px 20px}
+.hero-content{animation:fadeIn 1s ease; max-width:800px}
+.hero h1{font-size:4rem;font-weight:900;color:var(--gold);margin-bottom:20px;text-shadow:0 0 25px rgba(255,215,0,0.5)}
+.hero p{font-size:1.3rem;color:var(--text);margin-bottom:35px;line-height:1.8}
+.btn{background:linear-gradient(45deg, var(--gold), #ffb700);color:#000;padding:14px 40px;border:none;border-radius:50px;font-size:18px;font-weight:900;cursor:pointer;transition:0.4s;text-decoration:none;display:inline-block;box-shadow:0 5px 15px rgba(255,215,0,0.3)}
+.btn:hover{transform:scale(1.05);box-shadow:0 0 35px var(--gold)}
 
-section{padding:60px 20px;max-width:1300px;margin:auto}
-.section-title{text-align:center;font-size:2.2rem;margin-bottom:40px;color:var(--gold)}
+section{padding:80px 5%;max-width:1300px;margin:auto}
+.section-title{text-align:center;font-size:2.5rem;margin-bottom:50px;color:var(--gold);position:relative}
+.section-title::after{content:'';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:60px;height:3px;background:var(--gold);border-radius:2px}
 
-.about{display:flex;gap:30px;align-items:center;flex-wrap:wrap;justify-content:center}
-.about img{width:100%;max-width:400px;height:auto;border-radius:20px;animation:float 3s ease-in-out infinite,glow 2s ease-in-out infinite}
-.about-text{flex:1;min-width:280px;font-size:1.1rem;line-height:2}
+.about{display:flex;gap:50px;align-items:center;flex-wrap:wrap;justify-content:center}
+.about img{width:100%;max-width:450px;height:auto;border-radius:20px;animation:float 4s ease-in-out infinite, glow 3s ease-in-out infinite;border:3px solid var(--gold)}
+.about-text{flex:1;min-width:300px;font-size:1.15rem;line-height:2;color:var(--text)}
+.features-list {list-style: none; margin-top: 20px;}
+.features-list li {margin-bottom: 12px; display: flex; align-items: center; gap: 12px; font-weight: 600}
+.features-list i {color: var(--gold); font-size: 1.3rem;}
 
-.features-list {list-style: none; margin-top: 15px;}
-.features-list li {margin-bottom: 10px; display: flex; align-items: center; gap: 10px;}
-.features-list i {color: var(--gold); font-size: 1.2rem;}
+.stats-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;text-align:center;margin-top:40px}
+.stat-box{background:rgba(31,40,51,0.6);padding:20px;border-radius:15px;border:1px solid #2f3b4c}
+.stat-box i{font-size:2rem;color:var(--gold);margin-bottom:10px}
+.stat-number{font-size:2rem;font-weight:900;color:#fff}
+.stat-title{color:var(--text);font-size:1rem}
 
-.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
-.gallery img{width:100%;height:220px;object-fit:cover;border-radius:15px;transition:0.4s}
-.gallery img:hover{transform:scale(1.05);box-shadow:0 0 20px var(--gold)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.gallery img{width:100%;height:240px;object-fit:cover;border-radius:15px;transition:0.4s;border:2px solid #333}
+.gallery img:hover{transform:scale(1.05) translateY(-5px);border-color:var(--gold);box-shadow:0 10px 25px rgba(255,215,0,0.3)}
 
-.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
-.card{background:var(--card);padding:25px;border-radius:20px;text-align:center;border:2px solid #333;transition:0.4s}
-.card:hover{transform:translateY(-10px);border-color:var(--gold);box-shadow:0 15px 40px rgba(255,215,0,0.2)}
-.card h3{color:var(--gold);font-size:1.6rem;margin-bottom:10px}
-.price{font-size:2.8rem;font-weight:900;color:var(--gold)}
-.price span{font-size:1rem;color:#aaa}
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:25px}
+.card{background:var(--card);padding:35px 25px;border-radius:20px;text-align:center;border:2px solid #2f3b4c;transition:0.4s}
+.card:hover{transform:translateY(-10px);border-color:var(--gold);box-shadow:0 15px 40px rgba(255,215,0,0.15)}
+.card h3{color:var(--gold);font-size:1.8rem;margin-bottom:15px}
+.price{font-size:3.2rem;font-weight:900;color:#fff;margin-bottom:15px}
+.price span{font-size:1.1rem;color:var(--text)}
 
-.form-container{background:var(--card);padding:40px 20px;border-radius:20px;max-width:650px;margin:auto;border:2px solid #333;text-align:center;}
-input,select,textarea{width:100%;padding:12px;margin-bottom:15px;border-radius:10px;border:2px solid #333;background:#1a1a1a;color:#fff;font-size:16px;text-align:right;}
-input:focus,textarea:focus{border-color:var(--gold);outline:none}
+.comments-section {background: rgba(31, 40, 51, 0.3); padding: 40px 20px; border-radius: 20px; border: 1px solid #2f3b4c; margin-top: 30px;}
+.comments-list {max-height: 400px; overflow-y: auto; margin-bottom: 30px; padding-right: 10px;}
+.comment-item {background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-right: 4px solid var(--gold);}
+.comment-header {display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 700; color: #fff;}
+.comment-stars {color: var(--gold); font-size: 0.9rem;}
+.disabled-star {color: #4a5568 !important;} /* النجوم غير المحددة باهتة */
+.comment-text {color: var(--text); line-height: 1.6;}
+.comment-date {font-size: 0.8rem; color: #888;}
 
-.success-box{padding:20px;color:#00ff88;font-weight:bold;font-size:1.3rem;line-height:1.8}
-.success-icon {font-size: 4rem; color: #00ff88; margin-bottom: 15px; display: block;}
+.faq-container{max-width:800px;margin:auto}
+.faq-item{background:var(--card);margin-bottom:15px;border-radius:10px;border:1px solid #2f3b4c;overflow:hidden}
+.faq-question{padding:20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:1.1rem;transition:0.3s}
+.faq-question:hover{background:rgba(255,215,0,0.05)}
+.faq-answer{padding:0 20px;max-height:0;overflow:hidden;transition:max-height 0.3s ease;color:var(--text);line-height:1.8}
 
-footer{text-align:center;padding:25px 15px;background:#000;color:#aaa;font-size:14px}
+.form-container{background:var(--card);padding:50px 30px;border-radius:24px;max-width:700px;margin:auto;border:2px solid #2f3b4c;box-shadow:0 20px 50px rgba(0,0,0,0.3)}
+input,select,textarea{width:100%;padding:14px;margin-bottom:20px;border-radius:12px;border:2px solid #2f3b4c;background:#11161d;color:#fff;font-size:16px;text-align:right;transition:0.3s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:none;box-shadow:0 0 10px rgba(255,215,0,0.2)}
 
-@media (max-width: 480px) {
-    nav{flex-direction: column; gap: 10px; padding: 10px;}
-    nav a{margin: 0 5px; font-size: 12px;}
-    .hero h1{font-size: 2.3rem;}
-    .hero p{font-size: 1rem;}
-    .section-title{font-size: 1.8rem;}
-    .btn{width: 100%; text-align: center; box-sizing: border-box;}
+.error-msg {background: #ff4d4d; color: #fff; padding: 12px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; text-align: center;}
+.success-box{padding:30px;color:#00ff88;font-weight:bold;font-size:1.4rem;line-height:2}
+.success-icon {font-size: 5rem; color: #00ff88; margin-bottom: 20px; display: block;animation:float 3s ease-in-out infinite}
+
+footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);font-size:15px;border-top:1px solid #11161d}
+
+@media (max-width: 768px) {
+    nav{flex-direction: column; gap: 15px; padding: 15px 5%; text-align:center}
+    nav .links{gap: 12px; flex-wrap: wrap; justify-content: center;}
+    nav a{font-size: 13px;}
+    .hero h1{font-size: 2.8rem;}
+    .hero p{font-size: 1.1rem;}
+    .section-title{font-size: 2rem;}
+    .btn{width: 100%; text-align: center;}
 }
 </style></head><body>
 
 <nav>
-    <div style="font-weight:900;color:var(--gold);font-size:20px; display:flex; align-items:center; gap:5px;">
-        <i class="fa-solid fa-crown"></i> {{ settings.hero_title }}
+    <div class="logo">
+        <i class="fa-solid fa-crown"></i> سيد اللعبة
     </div>
-    <div>
+    <div class="links">
         <a href="#home">الرئيسية</a>
         <a href="#about">عن المستر</a>
         <a href="#gallery">صورنا</a>
-        <a href="#pricing">الاسعار</a>
-        <a href="#book">الحجز</a>
+        <a href="#pricing">الأسعار</a>
+        <a href="#testimonials">آراء الطلاب</a>
+        <a href="#faq">الأسئلة الشائعة</a>
+        <a href="#book">الحجز الحالي</a>
     </div>
 </nav>
 
 <section class="hero" id="home">
     <div class="hero-content">
-        <h1>{{ settings.hero_title }}</h1>
-        <p>{{ settings.hero_desc }}</p>
+        <h1>سيد اللعبة <i class="fa-solid fa-bolt" style="color: var(--gold); font-size: 3rem; display: inline-block;"></i></h1>
+        <p>مستر الرياضيات الأول الذي يدمج بين بساطة الشرح والحل الاحترافي لتضمن الدرجة النهائية بكل سهولة وأنت مستمتع بالرحلة.</p>
         {% if already_booked %}
-            <a href="#book" class="btn"><i class="fa-solid fa-clipboard-check"></i> عرض حالة الحجز الخاص بك</a>
+            <a href="#book" class="btn"><i class="fa-solid fa-clipboard-check"></i> عرض حالة حجزك الحالي</a>
         {% else %}
-            <a href="#book" class="btn"><i class="fa-solid fa-calendar-days"></i> احجز محاضرتك بـ {{ settings.price_single }} جنيه</a>
+            <a href="#book" class="btn"><i class="fa-solid fa-calendar-days"></i> احجز مقعدك الآن | 40 جنيه</a>
         {% endif %}
     </div>
 </section>
 
 <section id="about">
-    <h2 class="section-title">عن المستر</h2>
+    <h2 class="section-title">من هو مستر الرياضيات؟</h2>
     <div class="about">
-        <img src="{{ settings.img_about }}">
+        <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2032">
         <div class="about-text">
-            <h3 style="color:var(--gold);font-size:1.8rem;margin-bottom:15px;text-align:center">{{ settings.about_title }}</h3>
-            <p>{{ settings.about_desc }}</p>
+            <h3 style="color:var(--gold);font-size:1.9rem;margin-bottom:15px;">خبرة أكثر من 10 سنوات في تبسيط الرياضيات</h3>
+            <p>الرياضيات ليست حفظ قوانين، الرياضيات لعبة وإذا فهمت أسرارها ستصبح هدافاً فيها. نقدم لك نظاماً تعليمياً متكاملاً يشمل:</p>
             <ul class="features-list">
-                <li><i class="fa-solid fa-circle-check"></i> مجموعات صغيرة 8 طلاب فقط</li>
-                <li><i class="fa-solid fa-circle-check"></i> امتحان كل حصة</li>
-                <li><i class="fa-solid fa-circle-check"></i> مراجعات مكثفة قبل الامتحان</li>
-                <li><i class="fa-solid fa-circle-check"></i> متابعة اولياء الامور</li>
+                <li><i class="fa-solid fa-square-root-variable"></i> مجموعات نخبة صغيرة (أقصى حد 8 طلاب للتركيز الشديد)</li>
+                <li><i class="fa-solid fa-medal"></i> تقييمات وامتحانات دورية بعد كل حصة مباشرة</li>
+                <li><i class="fa-solid fa-file-invoice"></i> مذكرات حصرية وتلخيصات كبسولة ليلة الامتحان</li>
+                <li><i class="fa-solid fa-headset"></i> دعم ومتابعة واستفسارات 24 ساعة عبر الواتساب</li>
             </ul>
+            
+            <div class="stats-container">
+                <div class="stat-box">
+                    <i class="fa-solid fa-user-graduate"></i>
+                    <div class="stat-number">+1500</div>
+                    <div class="stat-title">طالب متميز</div>
+                </div>
+                <div class="stat-box">
+                    <i class="fa-solid fa-star-and-crescent"></i>
+                    <div class="stat-number">10</div>
+                    <div class="stat-title">سنوات خبرة</div>
+                </div>
+                <div class="stat-box">
+                    <i class="fa-solid fa-certificate"></i>
+                    <div class="stat-number">%100</div>
+                    <div class="stat-title">نسبة نجاح</div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 <section id="gallery">
-    <h2 class="section-title">صور من السنتر والمحاضرات</h2>
+    <h2 class="section-title">بيئة الدراسة والسنتر</h2>
     <div class="gallery">
-        <img src="{{ settings.img_gallery1 }}">
-        <img src="{{ settings.img_gallery2 }}">
-        <img src="{{ settings.img_gallery3 }}">
-        <img src="{{ settings.img_gallery4 }}">
+        <img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1932">
+        <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2022">
+        <img src="https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2070">
+        <img src="https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=2071">
     </div>
 </section>
 
 <section id="pricing">
-    <h2 class="section-title">باقات واسعار</h2>
+    <h2 class="section-title">الباقات والاشتراكات</h2>
     <div class="pricing">
         <div class="card">
             <h3>الحصة الفردية</h3>
-            <div class="price">{{ settings.price_single }}<span> جنيه</span></div>
-            <p>حصة 2 ساعة - شرح + حل + واجب</p>
+            <div class="price">40 <span>جنيه</span></div>
+            <p>حصة مدتها ساعتين شاملة الشرح والتطبيق العملي وحل الواجب الفوري.</p>
         </div>
-        <div class="card" style="border-color:var(--gold)">
-            <h3>باقة 4 حصص</h3>
-            <div class="price">{{ settings.price_4_classes }}<span> جنيه</span></div>
-            <p>وفر في الاشتراك - متابعة واتساب + ملازم</p>
+        <div class="card" style="border-color:var(--gold); background: rgba(255,215,0,0.02)">
+            <h3>باقة الـ 4 حصص</h3>
+            <div class="price">150 <span>جنيه</span></div>
+            <p>توفير خاص ومتابعة دورية وتقارير أداء ترسل لولي الأمر أسبوعياً.</p>
         </div>
         <div class="card">
-            <h3>باقة الشهر</h3>
-            <div class="price">{{ settings.price_month }}<span> جنيه</span></div>
-            <p>8 حصص + مراجعات + 2 امتحان شامل</p>
+            <h3>الباقة الشهرية الكاملة</h3>
+            <div class="price">280 <span>جنيه</span></div>
+            <p>8 حصص كاملة ومراجعات مجانية وامتحانات شاملة بجوائز للمتفوقين.</p>
+        </div>
+    </div>
+</section>
+
+<section id="testimonials">
+    <h2 class="section-title">لوحة آراء وتعليقات الطلاب</h2>
+    <div class="comments-section">
+        
+        {% if comment_error %}
+            <div class="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> {{ comment_error }}</div>
+        {% endif %}
+
+        <div class="comments-list">
+            {% for comment in comments %}
+                <div class="comment-item">
+                    <div class="comment-header">
+                        <span><i class="fa-solid fa-user-circle"></i> {{ comment.name }}</span>
+                        <span class="comment-stars">
+                            {# رسم النجوم الملونة بناء على التقييم #}
+                            {% for i in range(comment.rating|int) %}
+                                <i class="fas fa-star"></i>
+                            {% endfor %}
+                            {# رسم باقي النجوم الخمسة بلون باهت رمادي #}
+                            {% for i in range(5 - comment.rating|int) %}
+                                <i class="fas fa-star disabled-star"></i>
+                            {% endfor %}
+                        </span>
+                    </div>
+                    <p class="comment-text">{{ comment.text }}</p>
+                    <div class="comment-date" style="text-align: left;"><i class="fa-solid fa-clock"></i> {{ comment.date }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <h3 style="color: var(--gold); margin-bottom: 15px;"><i class="fa-solid fa-pen-to-square"></i> اكتب تعليقك وتقييمك للمستر</h3>
+        <form action="/add_comment" method="POST">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input name="c_name" placeholder="اسمك الكريم" required>
+                <select name="c_rating" required>
+                    <option value="5">ممتاز (5 نجوم)</option>
+                    <option value="4">جيد جداً (4 نجوم)</option>
+                    <option value="3">متوسط (3 نجوم)</option>
+                    <option value="2">مقبول (نجمتين)</option>
+                    <option value="1">ضعيف (نجمة واحدة)</option>
+                </select>
+            </div>
+            <textarea name="c_text" rows="3" placeholder="اكتب رأيك بصراحة في الشرح والملخصات..." required></textarea>
+            <button class="btn" style="width: 100%; border-radius: 10px;"><i class="fa-solid fa-paper-plane"></i> نشر التعليق فوراً</button>
+        </form>
+    </div>
+</section>
+
+<section id="faq">
+    <h2 class="section-title">الأسئلة الشائعة</h2>
+    <div class="faq-container">
+        <div class="faq-item">
+            <div class="faq-question">أين مكان السنتر والمجموعات؟ <i class="fas fa-chevron-down"></i></div>
+            <div class="faq-answer"><p>بعد تأكيد الحجز مباشرة، سيقوم الفريق الإداري بالتواصل معك عبر الواتساب لتحديد فرع السنتر الأقرب لك وإرسال الموقع الجغرافي والمواعيد بالتفصيل.</p></div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">هل يوجد شرح مخصص للأجزاء الصعبة المتراكمة؟ <i class="fas fa-chevron-down"></i></div>
+            <div class="faq-answer"><p>نعم، يتم تقديم حصص تأسيسية ومراجعة سريعة لأي قواعد رياضية سابقة يحتاجها الطالب حتى يستوعب المنهج الحالي بيسر.</p></div>
         </div>
     </div>
 </section>
 
 <section id="book">
-    <h2 class="section-title">الحجز</h2>
+    <h2 class="section-title">احجز مكانك الآن</h2>
     <div class="form-container">
         {% if already_booked %}
             <div class="success-box">
                 <i class="fa-solid fa-circle-check success-icon"></i>
-                تم الحجز بنجاح سابقاً!<br>
-                لقد قمت بحجز محاضرتك بالفعل، وسنتواصل معك عبر الواتساب لتأكيد الموعد.
+                تم تسجيل الحجز بنجاح مسبقاً<br>
+                المقعد محجوز، وجاري مراجعة البيانات للتواصل عبر رقم الواتساب لتأكيد موعد الحصة الأولى.
             </div>
         {% else %}
-            <form method="POST">
-                <input name="name" placeholder="الاسم الكامل" required>
-                <input name="phone" placeholder="رقم الواتساب" required>
+            <form action="/" method="POST">
+                <input name="name" placeholder="الاسم بالكامل" required>
+                <input name="phone" type="tel" placeholder="رقم الواتساب (مثال: 01xxxxxxxxx)" required>
                 <select name="grade" required>
-                    <option value="">اختر الصف</option>
-                    <option>اولى ثانوي</option>
-                    <option>تانية ثانوي</option>
-                    <option>تالتة ثانوي</option>
+                    <option value="">اختر الصف الدراسي</option>
+                    <option>الصف الأول الثانوي</option>
+                    <option>الصف الثاني الثانوي</option>
+                    <option>الصف الثالث الثانوي</option>
                 </select>
                 <input type="date" name="date" required>
-                <textarea name="note" placeholder="ملاحظات - مثلا عايز مجموعة الصبح"></textarea>
-                <button class="btn" style="width:100%"><i class="fa-solid fa-check-double"></i> تأكيد الحجز - {{ settings.price_single }} جنيه</button>
+                <textarea name="note" rows="3" placeholder="أي ملاحظات أو استفسارات تود إعلام المستر بها (مثلاً: أفضل مواعيد الصباح).."></textarea>
+                <button class="btn" style="width:100%; border-radius:12px;"><i class="fa-solid fa-paper-plane"></i> تأكيد وإرسال طلب الحجز - 40 ج</button>
             </form>
         {% endif %}
     </div>
 </section>
 
-<footer>© 2026 {{ settings.hero_title }} - مستر الرياضيات. كل الحقوق محفوظة</footer>
+<footer>© 2026 سيد اللعبة - مستر الرياضيات. جميع الحقوق محفوظة.</footer>
 
+<script>
+document.querySelectorAll('.faq-question').forEach(item => {
+    item.addEventListener('click', () => {
+        const answer = item.nextElementSibling;
+        const icon = item.querySelector('i');
+        if (answer.style.maxHeight) {
+            answer.style.maxHeight = null;
+            answer.style.padding = "0 20px";
+            icon.style.transform = "rotate(0deg)";
+        } else {
+            answer.style.maxHeight = answer.scrollHeight + 20 + "px";
+            answer.style.padding = "10px 20px 20px 20px";
+            icon.style.transform = "rotate(180deg)";
+        }
+    });
+});
+</script>
 </body></html>"""
-
-def get_admin_keyboard():
-    return {
-        "inline_keyboard": [
-            [{"text": "عرض الحجوزات", "callback_data": "cmd_bookings"}],
-            [{"text": "تعديل الصور", "callback_data": "menu_images"}, {"text": "تعديل النصوص", "callback_data": "menu_texts"}],
-            [{"text": "تعديل الأسعار", "callback_data": "menu_prices"}]
-        ]
-    }
 
 def admin_bot():
     last_id = 0
-    print("البوت بدأ العمل والاتصال بنجاح...")
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={last_id+1}"
             res = requests.get(url, timeout=10).json()
             for update in res.get('result', []):
                 last_id = update['update_id']
+                message = update.get('message', {})
+                chat_id = message.get('chat', {}).get('id')
+                text = message.get('text', '')
                 
-                if 'callback_query' in update:
-                    cb = update['callback_query']
-                    chat_id = cb['message']['chat']['id']
-                    cb_data = cb['data']
-                    
-                    if int(chat_id) != ADMIN_CHAT_ID: continue
-                    
-                    settings = load_settings()
-                    
-                    if cb_data == "cmd_bookings":
+                if str(chat_id) == ADMIN_CHAT_ID:
+                    if text == '/bookings':
                         data = load_bookings()
-                        if not data:
-                            send_telegram("مفيش حجوزات لسه")
-                        else:
-                            msg = f"<b>الحجوزات - {len(data)} حجز</b>\n\n"
-                            for b in data[::-1][:10]:
-                                msg += f"<b>الاسم:</b> {b['name']}\n<b>الرقم:</b> {b['phone']}\n<b>الصف:</b> {b['grade']}\n<b>التاريخ:</b> {b['date']}\n<b>الوقت:</b> {b['time']}\n-------------------\n"
-                            send_telegram(msg)
-                            
-                    elif cb_data == "menu_images":
-                        kb = {"inline_keyboard": [
-                            [{"text": "صورة الواجهة الرئيسية", "callback_data": "set_img_hero"}],
-                            [{"text": "صورة قسم عن المستر", "callback_data": "set_img_about"}],
-                            [{"text": "المعرض (صورة 1)", "callback_data": "set_img_gallery1"}, {"text": "المعرض (صورة 2)", "callback_data": "set_img_gallery2"}],
-                            [{"text": "المعرض (صورة 3)", "callback_data": "set_img_gallery3"}, {"text": "المعرض (صورة 4)", "callback_data": "set_img_gallery4"}],
-                            [{"text": "رجوع", "callback_data": "main_menu"}]
-                        ]}
-                        send_telegram("اختر الصورة التي تريد تغييرها (ستحتاج لإرسال رابط الصورة الجديد مباشرة):", kb)
-                        
-                    elif cb_data == "menu_texts":
-                        kb = {"inline_keyboard": [
-                            [{"text": "اسم السنتر / العنوان الرئيسي", "callback_data": "set_hero_title"}],
-                            [{"text": "الوصف الرئيسي تحت الاسم", "callback_data": "set_hero_desc"}],
-                            [{"text": "عنوان قسم (عن المستر)", "callback_data": "set_about_title"}],
-                            [{"text": "وصف قسم (عن المستر)", "callback_data": "set_about_desc"}],
-                            [{"text": "رجوع", "callback_data": "main_menu"}]
-                        ]}
-                        send_telegram("اختر النص الذي تريد تعديله:", kb)
-                        
-                    elif cb_data == "menu_prices":
-                        kb = {"inline_keyboard": [
-                            [{"text": "سعر الحصة الفردية", "callback_data": "set_price_single"}],
-                            [{"text": "سعر باقة 4 حصص", "callback_data": "set_price_4_classes"}],
-                            [{"text": "سعر باقة الشهر", "callback_data": "set_price_month"}],
-                            [{"text": "رجوع", "callback_data": "main_menu"}]
-                        ]}
-                        send_telegram("اختر الباقة لتعديل سعرها:", kb)
-                        
-                    elif cb_data == "main_menu":
-                        send_telegram("اهلا يا سيد اللعبة. إليك لوحة التحكم الخاصة بالموقع:", get_admin_keyboard())
-                        
-                    elif cb_data.startswith("set_"):
-                        setting_key = cb_data.replace("set_", "")
-                        admin_state[str(chat_id)] = setting_key
-                        send_telegram(f"أرسل الآن القيمة أو الرابط الجديد لـ: {setting_key}")
-
-                elif 'message' in update:
-                    message = update['message']
-                    chat_id = message.get('chat', {}).get('id')
-                    text = message.get('text', '')
-                    
-                    if int(chat_id) != ADMIN_CHAT_ID: continue
-                    
-                    if str(chat_id) in admin_state and text not in ['/start', '/admin']:
-                        key_to_update = admin_state[str(chat_id)]
-                        settings = load_settings()
-                        settings[key_to_update] = text
-                        save_settings(settings)
-                        
-                        del admin_state[str(chat_id)]
-                        send_telegram(f"تم تحديث {key_to_update} بنجاح في الموقع!", get_admin_keyboard())
-                    else:
-                        if text in ['/start', '/admin']:
-                            send_telegram("اهلا يا سيد اللعبة. إليك لوحة التحكم الخاصة بالموقع من هنا مباشرة:", get_admin_keyboard())
+                        if not data: 
+                            send_telegram("لا يوجد أي حجوزات مسجلة حتى الآن")
+                            continue
+                        msg = f"<b>قائمة الحجوزات الحالية ({len(data)} حجز):</b>\n\n"
+                        for b in data[::-1][:10]:
+                            msg += f"<b>الاسم:</b> {b['name']}\n<b>الرقم:</b> {b['phone']}\n<b>الصف:</b> {b['grade']}\n<b>التاريخ المطلوب:</b> {b['date']}\n<b>ملاحظة:</b> {b.get('note',' لا يوجد ')}\n<b>وقت الحجز:</b> {b['time']}\n---------------------------\n"
+                        send_telegram(msg)
+                    elif text == '/start':
+                        send_telegram("أهلاً بك يا سيد اللعبة\n\nإليك الأوامر المتاحة لوحة التحكم:\n/bookings - لعرض آخر 10 حجوزات واردة للموقع فوراً.")
         except: pass
         time.sleep(2)
 
 @app.route('/', methods=['GET','POST'])
 def home():
-    settings = load_settings()
     already_booked = request.cookies.get('has_booked') == 'true'
+    comments = load_comments()
 
     if request.method == 'POST':
         if already_booked:
-            return make_response(render_template_string(HTML, already_booked=True, settings=settings))
+            return make_response(render_template_string(HTML, already_booked=True, comments=comments))
             
+        name = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        grade = request.form.get('grade', '').strip()
+        date = request.form.get('date', '').strip()
+        note = request.form.get('note', '').strip()
+
+        if not name or not phone or not grade or not date:
+            return "برجاء ملء كافة الحقول الأساسية قبل الإرسال!", 400
+
         data = load_bookings()
         booking = {
-            'name': request.form['name'],
-            'phone': request.form['phone'],
-            'grade': request.form['grade'],
-            'date': request.form['date'],
-            'note': request.form['note'],
+            'name': name,
+            'phone': phone,
+            'grade': grade,
+            'date': date,
+            'note': note if note else "لا يوجد",
             'time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         }
         data.append(booking)
         save_bookings(data)
         
-        admin_msg = f"حجز جديد!\nالاسم: {booking['name']}\nالرقم: {booking['phone']}\nالصف: {booking['grade']}\nالتاريخ: {booking['date']}"
+        admin_msg = f"<b>حجز جديد للموقع!</b>\n\n<b>الاسم:</b> {booking['name']}\n<b>رقم الواتساب:</b> {booking['phone']}\n<b>الصف:</b> {booking['grade']}\n<b>التاريخ المفضّل:</b> {booking['date']}\n<b>ملاحظات الطالب:</b> {booking['note']}"
         threading.Thread(target=send_telegram, args=(admin_msg,)).start()
         
-        resp = make_response(render_template_string(HTML, already_booked=True, settings=settings))
+        resp = make_response(render_template_string(HTML, already_booked=True, comments=comments))
         resp.set_cookie('has_booked', 'true', max_age=31536000) 
         return resp
 
-    return render_template_string(HTML, already_booked=already_booked, settings=settings)
+    return render_template_string(HTML, already_booked=already_booked, comments=comments)
+
+@app.route('/add_comment', methods=['POST'])
+def add_comment():
+    c_name = request.form.get('c_name', '').strip()
+    c_text = request.form.get('c_text', '').strip()
+    c_rating = request.form.get('c_rating', '5')
+
+    if check_profanity(c_name) or check_profanity(c_text):
+        comments = load_comments()
+        already_booked = request.cookies.get('has_booked') == 'true'
+        return render_template_string(HTML, already_booked=already_booked, comments=comments, comment_error="عذراً، يحتوي تعليقك أو اسمك على كلمات غير لائقة ومحظورة في الموقع!")
+
+    if c_name and c_text:
+        comments = load_comments()
+        new_comment = {
+            "name": c_name,
+            "rating": c_rating,
+            "text": c_text,
+            "date": datetime.date.today().strftime("%Y-%m-%d")
+        }
+        comments.insert(0, new_comment)
+        save_comments(comments)
+        
+        threading.Thread(target=send_telegram, args=(f"📝 <b>تعليق جديد بالموقع!</b>\n<b>الاسم:</b> {c_name}\n<b>التقييم:</b> {c_rating} نجوم\n<b>التعليق:</b> {c_text}",)).start()
+
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    if TELEGRAM_TOKEN != "":
+    if TELEGRAM_TOKEN != "حط_التوكن_هنا" and TELEGRAM_TOKEN != "":
         threading.Thread(target=admin_bot, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
