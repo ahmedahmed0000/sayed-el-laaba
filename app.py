@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 BOOKINGS_FILE = 'bookings.json'
-PRICE = 40  # تم تعديل السعر هنا إلى 40 جنيه
+PRICE = 40  
 
 TELEGRAM_TOKEN = "8801743115:AAGN2S0DwR5lSMwYMjmsxLyD4E8LJ62mdZI"
 ADMIN_CHAT_ID = "7728398907"
@@ -206,7 +206,7 @@ def admin_bot():
                 message = update.get('message', {})
                 chat_id = message.get('chat', {}).get('id')
                 text = message.get('text', '')
-                
+
                 if str(chat_id) == ADMIN_CHAT_ID:
                     if text == '/bookings':
                         data = load_bookings()
@@ -230,7 +230,7 @@ def home():
         if already_booked:
             resp = make_response(render_template_string(HTML, already_booked=True))
             return resp
-            
+
         data = load_bookings()
         booking = {
             'name': request.form['name'],
@@ -242,10 +242,10 @@ def home():
         }
         data.append(booking)
         save_bookings(data)
-        
+
         admin_msg = f"<b>حجز جديد!</b>\n<b>الاسم:</b> {booking['name']}\n<b>الرقم:</b> {booking['phone']}\n<b>الصف:</b> {booking['grade']}\n<b>التاريخ:</b> {booking['date']}"
         threading.Thread(target=send_telegram, args=(admin_msg,)).start()
-        
+
         resp = make_response(render_template_string(HTML, already_booked=True))
         resp.set_cookie('has_booked', 'true', max_age=31536000) 
         return resp
@@ -255,4 +255,6 @@ def home():
 if __name__ == '__main__':
     if TELEGRAM_TOKEN != "حط_التوكن_هنا" and TELEGRAM_TOKEN != "":
         threading.Thread(target=admin_bot, daemon=True).start()
-    app.run(host='0.0.0.0', port=5000)
+    
+    port = int(os.environ.get("PORT", 5000)) # التعديل ده عشان Render
+    app.run(host='0.0.0.0', port=port)
