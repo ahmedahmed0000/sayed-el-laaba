@@ -7,7 +7,7 @@ BOOKINGS_FILE = 'bookings.json'
 SETTINGS_FILE = 'settings.json'
 
 # تم تثبيت البيانات الخاصة بك وتأمين المقارنة البرمجية لها
-TELEGRAM_TOKEN = "8801743115:AAGN2S0DwR5lSMwYMjmsxLyD4E8LJ62mdZI"
+TELEGRAM_TOKEN = "8972885616:AAFxaKauqJBKZMl1OlXrGgHhmMM4jCYVnlo"
 ADMIN_CHAT_ID = 7728398907  # تم تحويله إلى رقم ليتوافق تماماً مع التليجرام
 
 DEFAULT_SETTINGS = {
