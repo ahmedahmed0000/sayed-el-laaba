@@ -123,8 +123,32 @@ input,select,textarea{width:100%;padding:14px;margin-bottom:20px;border-radius:1
 input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:none;box-shadow:0 0 10px rgba(255,215,0,0.2)}
 
 .error-msg {background: #ff4d4d; color: #fff; padding: 12px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; text-align: center;}
-.success-box{padding:30px;color:#00ff88;font-weight:bold;font-size:1.4rem;line-height:2}
-.success-icon {font-size: 5rem; color: #00ff88; margin-bottom: 20px; display: block;animation:float 3s ease-in-out infinite}
+
+/* تنسيق فك تشابك وكسر النصوص لـ صندوق حجز المتكرر */
+.success-box {
+    padding: 10px 5px !important;
+    text-align: center !important;
+    display: block !important;
+    width: 100% !important;
+}
+.success-title-text {
+    color: #00ff88 !important;
+    font-weight: 700 !important;
+    font-size: 1.4rem !important;
+    margin-top: 10px !important;
+    margin-bottom: 15px !important;
+    display: block !important;
+    white-space: normal !important;
+}
+.success-desc-text {
+    color: #ffffff !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    line-height: 1.7 !important;
+    display: block !important;
+    white-space: normal !important;
+}
+.success-icon {font-size: 4.5rem; color: #00ff88; margin-bottom: 15px; display: inline-block; animation:float 3s ease-in-out infinite}
 
 footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);font-size:15px;border-top:1px solid #11161d}
 
@@ -286,7 +310,7 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
             <div class="faq-answer"><p>بعد تأكيد الحجز مباشرة، سيقوم الفريق الإداري بالتواصل معك عبر الواتساب لتحديد فرع السنتر الأقرب لك وإرسال الموقع الجغرافي والمواعيد بالتفصيل.</p></div>
         </div>
         <div class="faq-item">
-            <div class="faq-question">هل يوجد شرح مخصص للأجزاء الصعبة المتراكمة? <i class="fas fa-chevron-down"></i></div>
+            <div class="faq-question">هل يوجد شرح مخصص للأجزاء الصعبة المتراكمة؟ <i class="fas fa-chevron-down"></i></div>
             <div class="faq-answer"><p>نعم، يتم تقديم حصص تأسيسية ومراجعة سريعة لأي قواعد رياضية سابقة يحتاجها الطالب حتى يستوعب المنهج الحالي بيسر.</p></div>
         </div>
     </div>
@@ -298,8 +322,8 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
         {% if already_booked %}
             <div class="success-box">
                 <i class="fa-solid fa-circle-check success-icon"></i>
-                تم تسجيل الحجز بنجاح مسبقاً<br>
-                المقعد محجوز، وجاري مراجعة البيانات للتواصل عبر رقم الواتساب لتأكيد موعد الحصة الأولى.
+                <div class="success-title-text">تم تسجيل الحجز بنجاح مسبقاً</div>
+                <div class="success-desc-text">المقعد محجوز، وجاري مراجعة البيانات للتواصل عبر رقم الواتساب لتأكيد موعد الحصة الأولى.</div>
             </div>
         {% else %}
             <form action="/" method="POST">
