@@ -101,7 +101,7 @@ footer{{text-align:center;padding:25px;background:#000;color:#aaa}}
     <h2 class="section-title">عن المستر</h2>
     <div class="about">
         <img src="{settings['about_img']}">
-        <div><h3 style="color:var(--gold)">خبرة 10 سنين في اللعبة</h3><p>مع المkستر الرياضيات هتبقى لعبة</p></div>
+        <div><h3 style="color:var(--gold)">خبرة 10 سنين في اللعبة</h3><p>مع المستر الرياضيات هتبقى لعبة</p></div>
     </div>
 </section>
 
