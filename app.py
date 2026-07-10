@@ -68,7 +68,7 @@ nav .links{display:flex;gap:20px}
 nav a{color:#fff;text-decoration:none;font-weight:700;transition:0.3s;font-size:15px}
 nav a:hover{color:var(--gold)}
 
-.hero{min-height:100vh;background:linear-gradient(rgba(11,12,16,0.75),rgba(11,12,16,0.95)),url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070') center/cover fixed; display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 20px 60px 20px}
+.hero{min-height:100vh;background:linear-gradient(rgba(11,12,16,0.75),rgba(11,12,16,0.95)),url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2070') center/cover fixed; display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 20px 60px 20px}
 .hero-content{animation:fadeIn 1s ease; max-width:800px}
 .hero h1{font-size:4rem;font-weight:900;color:var(--gold);margin-bottom:20px;text-shadow:0 0 25px rgba(255,215,0,0.5)}
 .hero p{font-size:1.3rem;color:var(--text);margin-bottom:35px;line-height:1.8}
@@ -80,7 +80,7 @@ section{padding:80px 5%;max-width:1300px;margin:auto}
 .section-title::after{content:'';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:60px;height:3px;background:var(--gold);border-radius:2px}
 
 .about{display:flex;gap:50px;align-items:center;flex-wrap:wrap;justify-content:center}
-.about img{width:100%;max-width:450px;height:auto;border-radius:20px;animation:float 4s ease-in-out infinite, glow 3s ease-in-out infinite;border:3px solid var(--gold)}
+.about img{width:100%;max-width:450px;height:300px;object-fit:cover;border-radius:20px;animation:float 4s ease-in-out infinite, glow 3s ease-in-out infinite;border:3px solid var(--gold)}
 .about-text{flex:1;min-width:300px;font-size:1.15rem;line-height:2;color:var(--text)}
 .features-list {list-style: none; margin-top: 20px;}
 .features-list li {margin-bottom: 12px; display: flex; align-items: center; gap: 12px; font-weight: 600}
@@ -108,7 +108,7 @@ section{padding:80px 5%;max-width:1300px;margin:auto}
 .comment-item {background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; border-right: 4px solid var(--gold);}
 .comment-header {display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 700; color: #fff;}
 .comment-stars {color: var(--gold); font-size: 0.9rem;}
-.disabled-star {color: #4a5568 !important;} /* النجوم غير المحددة باهتة */
+.disabled-star {color: #4a5568 !important;}
 .comment-text {color: var(--text); line-height: 1.6;}
 .comment-date {font-size: 0.8rem; color: #888;}
 
@@ -169,7 +169,7 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
 <section id="about">
     <h2 class="section-title">من هو مستر الرياضيات؟</h2>
     <div class="about">
-        <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2032">
+        <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=2070">
         <div class="about-text">
             <h3 style="color:var(--gold);font-size:1.9rem;margin-bottom:15px;">خبرة أكثر من 10 سنوات في تبسيط الرياضيات</h3>
             <p>الرياضيات ليست حفظ قوانين، الرياضيات لعبة وإذا فهمت أسرارها ستصبح هدافاً فيها. نقدم لك نظاماً تعليمياً متكاملاً يشمل:</p>
@@ -204,10 +204,10 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
 <section id="gallery">
     <h2 class="section-title">بيئة الدراسة والسنتر</h2>
     <div class="gallery">
-        <img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1932">
-        <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2022">
-        <img src="https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2070">
-        <img src="https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=2071">
+        <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070">
+        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=2070">
+        <img src="https://images.unsplash.com/photo-1544535830-9df3f56fff6a?q=80&w=2070">
+        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071">
     </div>
 </section>
 
@@ -246,11 +246,9 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
                     <div class="comment-header">
                         <span><i class="fa-solid fa-user-circle"></i> {{ comment.name }}</span>
                         <span class="comment-stars">
-                            {# رسم النجوم الملونة بناء على التقييم #}
                             {% for i in range(comment.rating|int) %}
                                 <i class="fas fa-star"></i>
                             {% endfor %}
-                            {# رسم باقي النجوم الخمسة بلون باهت رمادي #}
                             {% for i in range(5 - comment.rating|int) %}
                                 <i class="fas fa-star disabled-star"></i>
                             {% endfor %}
@@ -288,7 +286,7 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
             <div class="faq-answer"><p>بعد تأكيد الحجز مباشرة، سيقوم الفريق الإداري بالتواصل معك عبر الواتساب لتحديد فرع السنتر الأقرب لك وإرسال الموقع الجغرافي والمواعيد بالتفصيل.</p></div>
         </div>
         <div class="faq-item">
-            <div class="faq-question">هل يوجد شرح مخصص للأجزاء الصعبة المتراكمة؟ <i class="fas fa-chevron-down"></i></div>
+            <div class="faq-question">هل يوجد شرح مخصص للأجزاء الصعبة المتراكمة? <i class="fas fa-chevron-down"></i></div>
             <div class="faq-answer"><p>نعم، يتم تقديم حصص تأسيسية ومراجعة سريعة لأي قواعد رياضية سابقة يحتاجها الطالب حتى يستوعب المنهج الحالي بيسر.</p></div>
         </div>
     </div>
