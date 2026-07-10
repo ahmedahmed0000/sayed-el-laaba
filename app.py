@@ -6,8 +6,9 @@ app = Flask(__name__)
 BOOKINGS_FILE = 'bookings.json'
 SETTINGS_FILE = 'settings.json'
 
+# تم تثبيت البيانات الخاصة بك وتأمين المقارنة البرمجية لها
 TELEGRAM_TOKEN = "8801743115:AAGN2S0DwR5lSMwYMjmsxLyD4E8LJ62mdZI"
-ADMIN_CHAT_ID = "7728398907"
+ADMIN_CHAT_ID = 7728398907  # تم تحويله إلى رقم ليتوافق تماماً مع التليجرام
 
 DEFAULT_SETTINGS = {
     "price_single": "40",
@@ -234,6 +235,7 @@ def get_admin_keyboard():
 
 def admin_bot():
     last_id = 0
+    print("البوت بدأ العمل والاتصال بنجاح...")
     while True:
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?offset={last_id+1}"
@@ -246,7 +248,7 @@ def admin_bot():
                     chat_id = cb['message']['chat']['id']
                     cb_data = cb['data']
                     
-                    if str(chat_id) != ADMIN_CHAT_ID: continue
+                    if int(chat_id) != ADMIN_CHAT_ID: continue
                     
                     settings = load_settings()
                     
@@ -302,7 +304,7 @@ def admin_bot():
                     chat_id = message.get('chat', {}).get('id')
                     text = message.get('text', '')
                     
-                    if str(chat_id) != ADMIN_CHAT_ID: continue
+                    if int(chat_id) != ADMIN_CHAT_ID: continue
                     
                     if str(chat_id) in admin_state and text not in ['/start', '/admin']:
                         key_to_update = admin_state[str(chat_id)]
