@@ -11,7 +11,7 @@ COMMENTS_FILE = 'comments.json'
 USERS_FILE = 'users.json'
 PRICE = 40  
 
-TELEGRAM_TOKEN = "8801743115:AAGN2S0DwR5lSMwYMjmsxLyD4E8LJ62mdZI"
+TELEGRAM_TOKEN = "8972885616:AAFxaKauqJBKZMl1OlXrGgHhmMM4jCYVnlo" # التوكن الجديد
 ADMIN_CHAT_ID = "7728398907"
 
 BAD_WORDS = ["شتم", "كلب", "حمار", "غبي", "يا ابن", "عرص", "خول", "شرموط", "تفه", "كس", "زب", "منيك", "قذر", "وسخ"]
@@ -63,6 +63,11 @@ HTML = """<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
 <title>سيد اللعبة - مستر الرياضيات</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- كود جوجل ادسنس - التحقق -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6854146816483589"
+     crossorigin="anonymous"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
 :root{--gold:#FFD700;--dark:#0b0c10;--card:#1f2833;--text:#c5c6c7;--teal:#66fcf1}
@@ -264,7 +269,7 @@ footer{text-align:center;padding:30px 15px;background:#050608;color:var(--text);
     <div class="grid-features">
         <div class="feat-box"><i class="fa-solid fa-brain"></i><h3>خرائط ذهنية متطورة</h3><p>ملخصات بصرية تختصر الفصول الطويلة والمعقدة في ورقة واحدة سهلة التذكر.</p></div>
         <div class="feat-box"><i class="fa-solid fa-laptop-code"></i><h3>متابعة على مدار الساعة</h3><p>فريق كامل متواجد للإجابة على جميع استفسارات الطلاب عبر الواتساب طوال الأسبوع.</p></div>
-        <div class="feat-box"><i class="fa-solid fa-sheet-plastic"></i><h3>امتحانات دورية</h3><p>اختبارات ذكية تقيس مستوى الطالب الحقيقي وتكشف نقاط الضعف لمعالجتها فوراً.</p></div>
+        <div class="feat-box"><i class="fa-solid fa-sheet-plastic"></i><h3>امتحانات دورية</h3><p>اختبارات ذكية تقيس مستوى الطالب الحقي وتكشف نقاط الضعف لمعالجتها فوراً.</p></div>
     </div>
 </section>
 
@@ -426,11 +431,11 @@ def admin_bot():
                     data_action = callback['data']
                     
                     if str(chat_id) == ADMIN_CHAT_ID and data_action.startswith("del_"):
-                        comment_id = data_action.replace("del_", "")
+                                                comment_id = data_action.replace("del_", "")
                         comments = load_comments()
-                        updated_comments = [c for c in comments if str(c.get('id')) != comment_id]
+                        updated_comments = [c for c in comments if str(c.get('id'))!= comment_id]
                         save_comments(updated_comments)
-                        
+
                         requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerCallbackQuery", data={"callback_query_id": callback['id'], "text": "❌ تم حذف التعليق!"})
                         requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/editMessageText", data={
                             "chat_id": ADMIN_CHAT_ID, "message_id": message_id,
@@ -449,7 +454,7 @@ def home():
     if request.method == 'POST':
         if already_booked:
             return make_response(render_template_string(HTML, already_booked=True, comments=comments, auth_error=auth_error))
-            
+
         name = session.get('user_name') if session.get('user_name') else request.form.get('name', '').strip()
         phone = request.form.get('phone', '').strip()
         grade = request.form.get('grade', '').strip()
@@ -460,12 +465,12 @@ def home():
         booking = {'name': name, 'phone': phone, 'grade': grade, 'date': date, 'note': note if note else "لا يوجد", 'time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}
         data.append(booking)
         save_bookings(data)
-        
+
         admin_msg = f"<b>حجز جديد!</b>\n\n<b>الاسم:</b> {name}\n<b>الرقم:</b> {phone}\n<b>الصف:</b> {grade}"
         threading.Thread(target=send_telegram, args=(admin_msg,)).start()
-        
+
         resp = make_response(render_template_string(HTML, already_booked=True, comments=comments, auth_error=auth_error))
-        resp.set_cookie('has_booked', 'true', max_age=31536000) 
+        resp.set_cookie('has_booked', 'true', max_age=31536000)
         return resp
 
     return render_template_string(HTML, already_booked=already_booked, comments=comments, auth_error=auth_error)
@@ -475,18 +480,18 @@ def register():
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '').strip()
-    
+
     users = load_users()
     if email in users:
         session['auth_error'] = "هذا البريد الإلكتروني مسجل بموقعنا بالفعل، تفضل بتسجيل الدخول."
         return redirect(url_for('home'))
-        
+
     users[email] = {
         "name": name,
         "password": generate_password_hash(password)
     }
     save_users(users)
-    
+
     session['user_email'] = email
     session['user_name'] = name
     return redirect(url_for('home'))
@@ -495,7 +500,7 @@ def register():
 def login():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '').strip()
-    
+
     users = load_users()
     if email in users and check_password_hash(users[email]['password'], password):
         session['user_email'] = email
@@ -521,7 +526,7 @@ def add_comment():
         new_comment = {"id": comment_id, "name": c_name, "rating": c_rating, "text": c_text, "date": datetime.date.today().strftime("%Y-%m-%d")}
         comments.insert(0, new_comment)
         save_comments(comments)
-        
+
         tg_msg = f"📝 <b>تعليق جديد!</b>\n<b>الاسم:</b> {c_name}\n<b>التعليق:</b> {c_text}"
         reply_markup = {"inline_keyboard": [[{"text": "❌ حذف التعليق", "callback_data": f"del_{comment_id}"}]]}
         threading.Thread(target=send_telegram, args=(tg_msg, reply_markup)).start()
@@ -529,6 +534,6 @@ def add_comment():
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    if TELEGRAM_TOKEN != "" and TELEGRAM_TOKEN != "حط_التوكن_هنا":
+    if TELEGRAM_TOKEN!= "":
         threading.Thread(target=admin_bot, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
